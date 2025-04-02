@@ -15,7 +15,7 @@ from assets.floor_designs import FLOOR_DESIGNS
 
 # Set page configuration
 st.set_page_config(
-    page_title="Interior Design Simulator",
+    page_title="3D Interior Design Simulator",
     page_icon="🏠",
     layout="wide"
 )
@@ -23,24 +23,18 @@ st.set_page_config(
 # Initialize session state variables if they don't exist
 if 'room' not in st.session_state:
     st.session_state.room = Room(width=500, height=400)
-if 'selected_furniture' not in st.session_state:
-    st.session_state.selected_furniture = None
-if 'dragging' not in st.session_state:
-    st.session_state.dragging = False
-if 'rotating' not in st.session_state:
-    st.session_state.rotating = False
-if 'drag_start_pos' not in st.session_state:
-    st.session_state.drag_start_pos = (0, 0)
 if 'designs' not in st.session_state:
     st.session_state.designs = {}
 if 'current_design_name' not in st.session_state:
     st.session_state.current_design_name = "Untitled Design"
-if 'scale_factor' not in st.session_state:
-    st.session_state.scale_factor = 1.0
+if 'camera_angle' not in st.session_state:
+    st.session_state.camera_angle = 45
+if 'camera_height' not in st.session_state:
+    st.session_state.camera_height = 200
 
 # Title and description
-st.title("Interior Design Simulator")
-st.markdown("Experiment with furniture placement, wall colors, and floor designs in a virtual room.")
+st.title("3D Interior Design Simulator")
+st.markdown("Experiment with wall colors and floor designs in a 3D virtual room.")
 
 # Main layout
 col1, col2 = st.columns([3, 1])
@@ -290,9 +284,8 @@ with col1:
     # Instructions
     st.markdown("""
     ### Instructions:
-    - Click on furniture in the side panel to add it to the room
-    - Click and drag furniture to move it around
-    - Select furniture to adjust properties (color, rotation, scale)
-    - Change wall color and floor design from the control panel
-    - Save your designs for later use
+    - Adjust the room dimensions from the settings panel
+    - Change wall colors and floor designs from the control panel
+    - Use the Camera Angle and Camera Height sliders to view the room from different angles
+    - Save your designs and export them as JSON
     """)
