@@ -8,17 +8,17 @@ FLOOR_DESIGNS = {
         "primary": "#D3D3D3", 
         "secondary": "#A9A9A9"
     },
-    "Carpet": {
-        "primary": "#4682B4", 
-        "secondary": "#5F9EA0"
-    },
     "Checkered": {
         "primary": "#FFFFFF", 
         "secondary": "#000000"
     },
-    "Marble": {
-        "primary": "#F5F5F5", 
-        "secondary": "#E0E0E0"
+    "Stripes": {
+        "primary": "#FFD700",  # Gold
+        "secondary": "#B8860B"  # Dark goldenrod
+    },
+    "Zigzag": {
+        "primary": "#3CB371",  # Medium sea green
+        "secondary": "#2E8B57"  # Sea green
     },
     "Solid Color": {
         "primary": "#CD853F", 

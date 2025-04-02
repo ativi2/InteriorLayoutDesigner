@@ -317,63 +317,91 @@ with col1:
                         name=f"Tile {x_idx}-{y_idx}"
                     )
                 )
-    elif st.session_state.room.floor_design == "Carpet":
-        # Carpet pattern with texture
-        carpet_base_size = 0.05  # small carpet texture size in meters
-        carpet_rows = int(height / carpet_base_size)
-        carpet_cols = int(width / carpet_base_size)
+    elif st.session_state.room.floor_design == "Stripes":
+        # Stripes pattern - horizontal stripes
+        stripe_width = 0.15  # width of each stripe in meters
+        num_stripes = int(height / stripe_width)
         
-        # Create a more textured carpet pattern
-        for row in range(carpet_rows):
-            for col in range(carpet_cols):
-                # Calculate position
-                x_start = col * carpet_base_size
-                y_start = row * carpet_base_size
-                x_end = min((col + 1) * carpet_base_size, width)
-                y_end = min((row + 1) * carpet_base_size, height)
+        for i in range(num_stripes):
+            y_start = i * stripe_width
+            y_end = (i + 1) * stripe_width
+            if y_end > height:
+                y_end = height
+                
+            vertices = [
+                [0, y_start, 0],
+                [width, y_start, 0],
+                [width, y_end, 0],
+                [0, y_end, 0]
+            ]
+            
+            i_indices = [0]
+            j_indices = [1]
+            k_indices = [2]
+            
+            color = floor_primary_color if i % 2 == 0 else floor_secondary_color
+            
+            fig.add_trace(
+                go.Mesh3d(
+                    x=[v[0] for v in vertices],
+                    y=[v[1] for v in vertices],
+                    z=[v[2] for v in vertices],
+                    i=i_indices, j=j_indices, k=k_indices,
+                    color=color,
+                    flatshading=True,
+                    name=f"Stripe {i}"
+                )
+            )
+    elif st.session_state.room.floor_design == "Zigzag":
+        # Zigzag pattern
+        zigzag_width = 0.2  # width of each zigzag section in meters
+        zigzag_height = 0.2  # height of each zigzag row
+        
+        num_zigzag_rows = int(height / zigzag_height)
+        num_zigzag_cols = int(width / zigzag_width) * 2  # Double for zigzag effect
+        
+        for row in range(num_zigzag_rows):
+            for col in range(num_zigzag_cols):
+                # Calculate zigzag position
+                x_start = (col // 2) * zigzag_width
+                y_start = row * zigzag_height
+                
+                # Zigzag pattern - alternate between forward and backward slant
+                if col % 2 == 0:  # Forward slant \
+                    vertices = [
+                        [x_start, y_start, 0],
+                        [x_start + zigzag_width, y_start + zigzag_height, 0],
+                        [x_start, y_start + zigzag_height, 0]
+                    ]
+                else:  # Backward slant /
+                    vertices = [
+                        [x_start, y_start + zigzag_height, 0],
+                        [x_start, y_start, 0],
+                        [x_start - zigzag_width, y_start + zigzag_height, 0]
+                    ]
                 
                 # Skip if outside room boundaries
-                if x_start >= width or y_start >= height:
+                if any(v[0] < 0 or v[0] > width or v[1] < 0 or v[1] > height for v in vertices):
                     continue
-                
-                # Create a small variation in height to give texture (very subtle)
-                z_variation = 0.001 if (row + col) % 5 == 0 else 0
-                
-                vertices = [
-                    [x_start, y_start, z_variation],
-                    [x_end, y_start, z_variation],
-                    [x_end, y_end, z_variation],
-                    [x_start, y_end, z_variation]
-                ]
                 
                 i_indices = [0]
                 j_indices = [1]
                 k_indices = [2]
                 
-                # Alternate colors slightly for texture
-                color_variation = (row * col) % 10 / 200  # Small color variation
-                if (row + col) % 3 == 0:
-                    color = floor_primary_color
-                elif (row + col) % 3 == 1:
-                    color = floor_secondary_color
-                else:
-                    # Create a third shade for more texture
-                    # Mix the primary and secondary colors
-                    color = floor_colors.get("accent", floor_primary_color)
+                # Alternate colors
+                color = floor_primary_color if (row + col) % 2 == 0 else floor_secondary_color
                 
-                # Only add a fraction of patches to reduce complexity and improve performance
-                if (row + col) % 3 == 0:
-                    fig.add_trace(
-                        go.Mesh3d(
-                            x=[v[0] for v in vertices],
-                            y=[v[1] for v in vertices],
-                            z=[v[2] for v in vertices],
-                            i=i_indices, j=j_indices, k=k_indices,
-                            color=color,
-                            flatshading=True,
-                            name=f"Carpet Texture"
-                        )
+                fig.add_trace(
+                    go.Mesh3d(
+                        x=[v[0] for v in vertices],
+                        y=[v[1] for v in vertices],
+                        z=[v[2] for v in vertices],
+                        i=i_indices, j=j_indices, k=k_indices,
+                        color=color,
+                        flatshading=True,
+                        name=f"Zigzag {row}-{col}"
                     )
+                )
     else:
         # Default solid floor for other designs
         vertices = [
