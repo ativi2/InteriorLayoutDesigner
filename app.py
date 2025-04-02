@@ -75,13 +75,51 @@ with col2:
         st.session_state.room.height = room_height
     
     # Wall color selection
-    st.subheader("Wall Color")
+    st.subheader("Wall Colors")
     wall_color_options = list(WALL_COLORS.keys())
-    selected_wall_color = st.selectbox("Select Wall Color", wall_color_options, 
-                                     index=wall_color_options.index(st.session_state.room.wall_color) if st.session_state.room.wall_color in wall_color_options else 0)
     
-    if selected_wall_color != st.session_state.room.wall_color:
-        st.session_state.room.wall_color = selected_wall_color
+    # Create tabs for different walls
+    wall_tabs = st.tabs(["All Walls", "Left Wall", "Right Wall", "Front Wall", "Back Wall"])
+    
+    with wall_tabs[0]:
+        selected_wall_color = st.selectbox("Select Color for All Walls", wall_color_options, 
+                                         index=wall_color_options.index(st.session_state.room.wall_color) if st.session_state.room.wall_color in wall_color_options else 0)
+        
+        if st.button("Apply to All Walls"):
+            st.session_state.room.wall_color = selected_wall_color
+            st.session_state.room.left_wall_color = selected_wall_color
+            st.session_state.room.right_wall_color = selected_wall_color
+            st.session_state.room.front_wall_color = selected_wall_color
+            st.session_state.room.back_wall_color = selected_wall_color
+            st.success("Applied color to all walls!")
+    
+    with wall_tabs[1]:
+        left_wall_idx = wall_color_options.index(st.session_state.room.left_wall_color) if st.session_state.room.left_wall_color in wall_color_options else 0
+        selected_left_wall_color = st.selectbox("Left Wall Color", wall_color_options, index=left_wall_idx)
+        
+        if selected_left_wall_color != st.session_state.room.left_wall_color:
+            st.session_state.room.left_wall_color = selected_left_wall_color
+    
+    with wall_tabs[2]:
+        right_wall_idx = wall_color_options.index(st.session_state.room.right_wall_color) if st.session_state.room.right_wall_color in wall_color_options else 0
+        selected_right_wall_color = st.selectbox("Right Wall Color", wall_color_options, index=right_wall_idx)
+        
+        if selected_right_wall_color != st.session_state.room.right_wall_color:
+            st.session_state.room.right_wall_color = selected_right_wall_color
+    
+    with wall_tabs[3]:
+        front_wall_idx = wall_color_options.index(st.session_state.room.front_wall_color) if st.session_state.room.front_wall_color in wall_color_options else 0
+        selected_front_wall_color = st.selectbox("Front Wall Color", wall_color_options, index=front_wall_idx)
+        
+        if selected_front_wall_color != st.session_state.room.front_wall_color:
+            st.session_state.room.front_wall_color = selected_front_wall_color
+    
+    with wall_tabs[4]:
+        back_wall_idx = wall_color_options.index(st.session_state.room.back_wall_color) if st.session_state.room.back_wall_color in wall_color_options else 0
+        selected_back_wall_color = st.selectbox("Back Wall Color", wall_color_options, index=back_wall_idx)
+        
+        if selected_back_wall_color != st.session_state.room.back_wall_color:
+            st.session_state.room.back_wall_color = selected_back_wall_color
     
     # Floor design selection
     st.subheader("Floor Design")
@@ -202,30 +240,114 @@ with col1:
     camera_y = camera_distance * math.cos(camera_angle_rad)
     camera_z = st.session_state.camera_height / 100
     
-    # Add floor
-    vertices = [
-        [0, 0, 0],  # bottom left
-        [width, 0, 0],  # bottom right
-        [width, height, 0],  # top right
-        [0, height, 0],  # top left
-    ]
+    # Add floor with pattern
+    floor_primary_color = floor_colors["primary"]
+    floor_secondary_color = floor_colors.get("secondary", floor_primary_color)
     
-    i = [0, 0, 0, 0]
-    j = [1, 2, 3, 0]
-    k = [2, 3, 0, 1]
-    
-    fig.add_trace(
-        go.Mesh3d(
-            x=[v[0] for v in vertices],
-            y=[v[1] for v in vertices],
-            z=[v[2] for v in vertices],
-            i=i, j=j, k=k,
-            color=floor_colors["primary"],
-            name="Floor"
+    # Create floor with visible pattern based on floor design
+    if st.session_state.room.floor_design == "Hardwood":
+        # Hardwood pattern - add strips
+        plank_width = 0.1  # width of each plank in meters
+        num_planks = int(width / plank_width)
+        
+        for i in range(num_planks):
+            x_start = i * plank_width
+            x_end = (i + 1) * plank_width
+            if x_end > width:
+                x_end = width
+                
+            vertices = [
+                [x_start, 0, 0],
+                [x_end, 0, 0],
+                [x_end, height, 0],
+                [x_start, height, 0]
+            ]
+            
+            i_indices = [0]
+            j_indices = [1]
+            k_indices = [2]
+            
+            color = floor_primary_color if i % 2 == 0 else floor_secondary_color
+            
+            fig.add_trace(
+                go.Mesh3d(
+                    x=[v[0] for v in vertices],
+                    y=[v[1] for v in vertices],
+                    z=[v[2] for v in vertices],
+                    i=i_indices, j=j_indices, k=k_indices,
+                    color=color,
+                    flatshading=True,
+                    name=f"Floor Plank {i}"
+                )
+            )
+    elif st.session_state.room.floor_design == "Tile":
+        # Tile pattern - add grid
+        tile_size = 0.2  # size of each tile in meters
+        for x_idx in range(int(width / tile_size) + 1):
+            for y_idx in range(int(height / tile_size) + 1):
+                x_start = x_idx * tile_size
+                y_start = y_idx * tile_size
+                x_end = min((x_idx + 1) * tile_size, width)
+                y_end = min((y_idx + 1) * tile_size, height)
+                
+                if x_start >= width or y_start >= height:
+                    continue
+                
+                vertices = [
+                    [x_start, y_start, 0],
+                    [x_end, y_start, 0],
+                    [x_end, y_end, 0],
+                    [x_start, y_end, 0]
+                ]
+                
+                i_indices = [0]
+                j_indices = [1]
+                k_indices = [2]
+                
+                color = floor_primary_color if (x_idx + y_idx) % 2 == 0 else floor_secondary_color
+                
+                fig.add_trace(
+                    go.Mesh3d(
+                        x=[v[0] for v in vertices],
+                        y=[v[1] for v in vertices],
+                        z=[v[2] for v in vertices],
+                        i=i_indices, j=j_indices, k=k_indices,
+                        color=color,
+                        flatshading=True,
+                        name=f"Tile {x_idx}-{y_idx}"
+                    )
+                )
+    else:
+        # Default solid floor for other designs
+        vertices = [
+            [0, 0, 0],  # bottom left
+            [width, 0, 0],  # bottom right
+            [width, height, 0],  # top right
+            [0, height, 0],  # top left
+        ]
+        
+        i = [0]
+        j = [1]
+        k = [2]
+        
+        fig.add_trace(
+            go.Mesh3d(
+                x=[v[0] for v in vertices],
+                y=[v[1] for v in vertices],
+                z=[v[2] for v in vertices],
+                i=i, j=j, k=k,
+                color=floor_primary_color,
+                name="Floor"
+            )
         )
-    )
     
-    # Add walls
+    # Get wall colors (individual wall colors if available)
+    left_wall_color = get_wall_color_hex(getattr(st.session_state.room, 'left_wall_color', st.session_state.room.wall_color))
+    back_wall_color = get_wall_color_hex(getattr(st.session_state.room, 'back_wall_color', st.session_state.room.wall_color))
+    right_wall_color = get_wall_color_hex(getattr(st.session_state.room, 'right_wall_color', st.session_state.room.wall_color))
+    front_wall_color = get_wall_color_hex(getattr(st.session_state.room, 'front_wall_color', st.session_state.room.wall_color))
+    
+    # Add walls with inside-facing colors
     # Wall 1 (left)
     vertices = [
         [0, 0, 0],  # bottom left
@@ -234,13 +356,18 @@ with col1:
         [0, 0, room_height],  # top left
     ]
     
+    i = [0]
+    j = [1]
+    k = [2]
+    
     fig.add_trace(
         go.Mesh3d(
             x=[v[0] for v in vertices],
             y=[v[1] for v in vertices],
             z=[v[2] for v in vertices],
             i=i, j=j, k=k,
-            color=wall_color_hex,
+            color=left_wall_color,
+            opacity=0.95,  # Slightly transparent to make it look like interior wall
             name="Left Wall"
         )
     )
@@ -259,7 +386,8 @@ with col1:
             y=[v[1] for v in vertices],
             z=[v[2] for v in vertices],
             i=i, j=j, k=k,
-            color=wall_color_hex,
+            color=back_wall_color,
+            opacity=0.95,
             name="Back Wall"
         )
     )
@@ -278,7 +406,8 @@ with col1:
             y=[v[1] for v in vertices],
             z=[v[2] for v in vertices],
             i=i, j=j, k=k,
-            color=wall_color_hex,
+            color=right_wall_color,
+            opacity=0.95,
             name="Right Wall"
         )
     )
@@ -297,7 +426,8 @@ with col1:
             y=[v[1] for v in vertices],
             z=[v[2] for v in vertices],
             i=i, j=j, k=k,
-            color=wall_color_hex,
+            color=front_wall_color,
+            opacity=0.95,
             name="Front Wall"
         )
     )
@@ -374,6 +504,23 @@ with col1:
                     name=furniture.name
                 )
             )
+            
+            # Add furniture name label
+            fig.add_trace(
+                go.Scatter3d(
+                    x=[f_x + f_width/2],
+                    y=[f_y + f_height/2],
+                    z=[f_z + f_thickness + 0.1],  # Position slightly above the furniture
+                    mode='text',
+                    text=[furniture.name],
+                    textposition='top center',
+                    textfont=dict(
+                        size=12,
+                        color='black'
+                    ),
+                    name=f"{furniture.name} Label"
+                )
+            )
     
     # Set up the 3D scene
     fig.update_layout(
@@ -394,13 +541,45 @@ with col1:
     # Display the 3D visualization
     st.plotly_chart(fig, use_container_width=True)
     
+    # Furniture Management Controls
+    st.subheader("Furniture Management")
+    
+    if hasattr(st.session_state.room, 'furniture') and st.session_state.room.furniture:
+        furniture_list = [(f.id, f.name) for f in st.session_state.room.furniture]
+        selected_furniture_id = st.selectbox("Select Furniture to Move or Delete", 
+                                           options=[id for id, _ in furniture_list],
+                                           format_func=lambda x: next((name for id, name in furniture_list if id == x), ""))
+        
+        selected_furniture = st.session_state.room.get_furniture_by_id(selected_furniture_id)
+        
+        if selected_furniture:
+            col_move, col_delete = st.columns(2)
+            
+            with col_move:
+                st.text(f"Current Position: ({selected_furniture.x}, {selected_furniture.y})")
+                new_x = st.slider("X Position", 0, st.session_state.room.width, int(selected_furniture.x))
+                new_y = st.slider("Y Position", 0, st.session_state.room.height, int(selected_furniture.y))
+                
+                if st.button("Move Furniture"):
+                    st.session_state.room.update_furniture_position(selected_furniture_id, new_x, new_y)
+                    st.success(f"Moved {selected_furniture.name} to ({new_x}, {new_y})")
+                    st.rerun()
+            
+            with col_delete:
+                if st.button("Delete Furniture"):
+                    if st.session_state.room.remove_furniture(selected_furniture_id):
+                        st.success(f"Removed {selected_furniture.name} from the room")
+                        st.rerun()
+    else:
+        st.write("No furniture in the room. Add furniture using the controls.")
+    
     # Instructions
     st.markdown("""
     ### Instructions:
     - Adjust the room dimensions from the settings panel
-    - Change wall colors and floor designs from the control panel
+    - Change wall colors for each wall individually through the wall color tabs
     - Add furniture by selecting items from the furniture panel
-    - Arrange furniture by dragging and rotating pieces
+    - Use the Furniture Management section to move or remove furniture
     - Use the Camera Angle and Height sliders to view the room from different angles
     - Save your designs and export them as JSON
     """)

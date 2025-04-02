@@ -22,35 +22,20 @@ def get_wall_color_hex(wall_color_name: str) -> str:
 
 def get_floor_design_color(floor_design_name: str) -> Dict[str, str]:
     """Get the colors for a floor design."""
-    design_type = FLOOR_DESIGNS.get(floor_design_name, "solid")
+    # Get floor design colors directly from the updated FLOOR_DESIGNS dictionary
+    design_colors = FLOOR_DESIGNS.get(floor_design_name)
     
-    if design_type == "wooden":
-        return {
-            "primary": "#8B4513",
-            "secondary": "#A0522D",
-            "accent": "#704214"
-        }
-    elif design_type == "tile":
-        return {
-            "primary": "#E5E5E5",
-            "secondary": "#CCCCCC",
-            "accent": "#AAAAAA"
-        }
-    elif design_type == "carpet":
-        return {
-            "primary": "#6495ED",
-            "secondary": "#5A86D7",
-            "accent": "#4A76C7"
-        }
-    elif design_type == "checkered":
-        return {
-            "primary": "#F5F5DC",
-            "secondary": "#D2B48C",
-            "accent": "#C2A47C"
-        }
-    else:  # solid
+    # If design not found, use a default
+    if not design_colors:
         return {
             "primary": "#F5F5DC",
             "secondary": "#F5F5DC",
             "accent": "#F5F5DC"
         }
+    
+    # Add accent color if not provided in the design
+    if "accent" not in design_colors:
+        # Create an accent color based on primary
+        design_colors["accent"] = design_colors.get("secondary", design_colors["primary"])
+    
+    return design_colors

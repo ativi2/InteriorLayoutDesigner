@@ -7,6 +7,11 @@ class Room:
         self.width = width
         self.height = height
         self.wall_color = wall_color
+        # Individual wall colors (initialized to match the main wall color)
+        self.left_wall_color = wall_color
+        self.right_wall_color = wall_color
+        self.front_wall_color = wall_color
+        self.back_wall_color = wall_color
         self.floor_design = floor_design
         self.furniture: List[Furniture] = []
         self.next_furniture_id = 1
@@ -75,6 +80,10 @@ class Room:
             "width": self.width,
             "height": self.height,
             "wall_color": self.wall_color,
+            "left_wall_color": self.left_wall_color,
+            "right_wall_color": self.right_wall_color,
+            "front_wall_color": self.front_wall_color,
+            "back_wall_color": self.back_wall_color,
             "floor_design": self.floor_design,
             "furniture": [f.to_dict() for f in self.furniture],
             "next_furniture_id": self.next_furniture_id
@@ -89,6 +98,12 @@ class Room:
             wall_color=data.get("wall_color", "White"),
             floor_design=data.get("floor_design", "Hardwood")
         )
+        
+        # Set individual wall colors if available
+        room.left_wall_color = data.get("left_wall_color", room.wall_color)
+        room.right_wall_color = data.get("right_wall_color", room.wall_color)
+        room.front_wall_color = data.get("front_wall_color", room.wall_color)
+        room.back_wall_color = data.get("back_wall_color", room.wall_color)
         
         room.next_furniture_id = data.get("next_furniture_id", 1)
         
