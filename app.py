@@ -40,10 +40,10 @@ def main():
     # ===== HEADER SECTION =====
     # Top header with site name and details
     st.markdown("""
-    <div style="text-align: center; padding: 20px; background-color: #f0f2f6; border-radius: 10px; margin-bottom: 20px;">
-        <h1>Interior Design Simulator</h1>
-        <p>An interactive tool for visualizing and planning interior spaces in 3D</p>
-        <p>Design your dream space with customizable walls, floors, and furniture</p>
+    <div style="text-align: center; padding: 20px; background-color: #2c3e50; border-radius: 10px; margin-bottom: 20px; color: #ecf0f1;">
+        <h1 style="color: #e74c3c;">Interior Design Simulator</h1>
+        <p style="color: #ecf0f1; font-size: 18px;">An interactive tool for visualizing and planning interior spaces in 3D</p>
+        <p style="color: #ecf0f1; font-size: 16px;">Design your dream space with customizable walls, floors, and furniture</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -688,20 +688,20 @@ def main():
     
     # ===== FOOTER SECTION =====
     st.markdown("""
-    <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; margin-top: 30px;">
-        <h2 style="text-align: center;">How to Use the Interior Design Simulator</h2>
-        <ul>
-            <li><strong>Visualize:</strong> The 3D room visualization shows your current design with all selected options</li>
-            <li><strong>Room Dimensions:</strong> Adjust the width and height of your room or load a template</li>
-            <li><strong>Wall Colors:</strong> Choose different colors for each wall separately</li>
-            <li><strong>Floor Design:</strong> Select from various floor patterns like Hardwood, Tile, Stripes, and Zigzag</li>
-            <li><strong>Furniture:</strong> Add furniture items from different categories and position them in the room</li>
-            <li><strong>Camera Control:</strong> Adjust the viewing angle to see the room from different perspectives</li>
-            <li><strong>Save/Load:</strong> Export your design as a JSON file to share or save it for later use</li>
+    <div style="background-color: #34495e; padding: 20px; border-radius: 10px; margin-top: 30px; color: #ecf0f1;">
+        <h2 style="text-align: center; color: #e74c3c;">How to Use the Interior Design Simulator</h2>
+        <ul style="color: #ecf0f1; font-size: 16px;">
+            <li><strong style="color: #f39c12;">Visualize:</strong> The 3D room visualization shows your current design with all selected options</li>
+            <li><strong style="color: #f39c12;">Room Dimensions:</strong> Adjust the width and height of your room or load a template</li>
+            <li><strong style="color: #f39c12;">Wall Colors:</strong> Choose different colors for each wall separately</li>
+            <li><strong style="color: #f39c12;">Floor Design:</strong> Select from various floor patterns like Hardwood, Tile, Stripes, and Zigzag</li>
+            <li><strong style="color: #f39c12;">Furniture:</strong> Add furniture items from different categories and position them in the room</li>
+            <li><strong style="color: #f39c12;">Camera Control:</strong> Adjust the viewing angle to see the room from different perspectives</li>
+            <li><strong style="color: #f39c12;">Save/Load:</strong> Export your design as a JSON file to share or save it for later use</li>
         </ul>
-        <div style="text-align: center; margin-top: 20px;">
-            <p>Contact: <a href="mailto:support@interiordesignsimulator.com">support@interiordesignsimulator.com</a></p>
-            <p>&copy; 2025 Interior Design Simulator. All rights reserved.</p>
+        <div style="text-align: center; margin-top: 20px; background-color: #2c3e50; padding: 15px; border-radius: 8px;">
+            <p style="color: #ecf0f1; font-size: 16px;">Contact: <a href="mailto:support@interiordesignsimulator.com" style="color: #3498db; text-decoration: none; font-weight: bold;">support@interiordesignsimulator.com</a></p>
+            <p style="color: #ecf0f1; font-size: 14px;">&copy; 2025 Interior Design Simulator. All rights reserved.</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
