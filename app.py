@@ -317,6 +317,63 @@ with col1:
                         name=f"Tile {x_idx}-{y_idx}"
                     )
                 )
+    elif st.session_state.room.floor_design == "Carpet":
+        # Carpet pattern with texture
+        carpet_base_size = 0.05  # small carpet texture size in meters
+        carpet_rows = int(height / carpet_base_size)
+        carpet_cols = int(width / carpet_base_size)
+        
+        # Create a more textured carpet pattern
+        for row in range(carpet_rows):
+            for col in range(carpet_cols):
+                # Calculate position
+                x_start = col * carpet_base_size
+                y_start = row * carpet_base_size
+                x_end = min((col + 1) * carpet_base_size, width)
+                y_end = min((row + 1) * carpet_base_size, height)
+                
+                # Skip if outside room boundaries
+                if x_start >= width or y_start >= height:
+                    continue
+                
+                # Create a small variation in height to give texture (very subtle)
+                z_variation = 0.001 if (row + col) % 5 == 0 else 0
+                
+                vertices = [
+                    [x_start, y_start, z_variation],
+                    [x_end, y_start, z_variation],
+                    [x_end, y_end, z_variation],
+                    [x_start, y_end, z_variation]
+                ]
+                
+                i_indices = [0]
+                j_indices = [1]
+                k_indices = [2]
+                
+                # Alternate colors slightly for texture
+                color_variation = (row * col) % 10 / 200  # Small color variation
+                if (row + col) % 3 == 0:
+                    color = floor_primary_color
+                elif (row + col) % 3 == 1:
+                    color = floor_secondary_color
+                else:
+                    # Create a third shade for more texture
+                    # Mix the primary and secondary colors
+                    color = floor_colors.get("accent", floor_primary_color)
+                
+                # Only add a fraction of patches to reduce complexity and improve performance
+                if (row + col) % 3 == 0:
+                    fig.add_trace(
+                        go.Mesh3d(
+                            x=[v[0] for v in vertices],
+                            y=[v[1] for v in vertices],
+                            z=[v[2] for v in vertices],
+                            i=i_indices, j=j_indices, k=k_indices,
+                            color=color,
+                            flatshading=True,
+                            name=f"Carpet Texture"
+                        )
+                    )
     else:
         # Default solid floor for other designs
         vertices = [
@@ -337,7 +394,8 @@ with col1:
                 z=[v[2] for v in vertices],
                 i=i, j=j, k=k,
                 color=floor_primary_color,
-                name="Floor"
+                name="Floor",
+                flatshading=True
             )
         )
     
@@ -347,33 +405,35 @@ with col1:
     right_wall_color = get_wall_color_hex(getattr(st.session_state.room, 'right_wall_color', st.session_state.room.wall_color))
     front_wall_color = get_wall_color_hex(getattr(st.session_state.room, 'front_wall_color', st.session_state.room.wall_color))
     
-    # Add walls with inside-facing colors
+    # Add walls with full rectangles (no partial walls)
     # Wall 1 (left)
-    vertices = [
+    left_wall_vertices = [
         [0, 0, 0],  # bottom left
         [0, height, 0],  # bottom right
         [0, height, room_height],  # top right
         [0, 0, room_height],  # top left
     ]
     
-    i = [0]
-    j = [1]
-    k = [2]
+    # For full rectangles, we need to define all triangular faces
+    i = [0, 0]
+    j = [1, 2]
+    k = [2, 3]
     
     fig.add_trace(
         go.Mesh3d(
-            x=[v[0] for v in vertices],
-            y=[v[1] for v in vertices],
-            z=[v[2] for v in vertices],
+            x=[v[0] for v in left_wall_vertices],
+            y=[v[1] for v in left_wall_vertices],
+            z=[v[2] for v in left_wall_vertices],
             i=i, j=j, k=k,
             color=left_wall_color,
             opacity=0.95,  # Slightly transparent to make it look like interior wall
-            name="Left Wall"
+            name="Left Wall",
+            flatshading=True
         )
     )
     
     # Wall 2 (back)
-    vertices = [
+    back_wall_vertices = [
         [0, 0, 0],  # bottom left
         [width, 0, 0],  # bottom right
         [width, 0, room_height],  # top right
@@ -382,18 +442,19 @@ with col1:
     
     fig.add_trace(
         go.Mesh3d(
-            x=[v[0] for v in vertices],
-            y=[v[1] for v in vertices],
-            z=[v[2] for v in vertices],
+            x=[v[0] for v in back_wall_vertices],
+            y=[v[1] for v in back_wall_vertices],
+            z=[v[2] for v in back_wall_vertices],
             i=i, j=j, k=k,
             color=back_wall_color,
             opacity=0.95,
-            name="Back Wall"
+            name="Back Wall",
+            flatshading=True
         )
     )
     
     # Wall 3 (right)
-    vertices = [
+    right_wall_vertices = [
         [width, 0, 0],  # bottom left
         [width, height, 0],  # bottom right
         [width, height, room_height],  # top right
@@ -402,18 +463,19 @@ with col1:
     
     fig.add_trace(
         go.Mesh3d(
-            x=[v[0] for v in vertices],
-            y=[v[1] for v in vertices],
-            z=[v[2] for v in vertices],
+            x=[v[0] for v in right_wall_vertices],
+            y=[v[1] for v in right_wall_vertices],
+            z=[v[2] for v in right_wall_vertices],
             i=i, j=j, k=k,
             color=right_wall_color,
             opacity=0.95,
-            name="Right Wall"
+            name="Right Wall",
+            flatshading=True
         )
     )
     
     # Wall 4 (front)
-    vertices = [
+    front_wall_vertices = [
         [0, height, 0],  # bottom left
         [width, height, 0],  # bottom right
         [width, height, room_height],  # top right
@@ -422,35 +484,18 @@ with col1:
     
     fig.add_trace(
         go.Mesh3d(
-            x=[v[0] for v in vertices],
-            y=[v[1] for v in vertices],
-            z=[v[2] for v in vertices],
+            x=[v[0] for v in front_wall_vertices],
+            y=[v[1] for v in front_wall_vertices],
+            z=[v[2] for v in front_wall_vertices],
             i=i, j=j, k=k,
             color=front_wall_color,
             opacity=0.95,
-            name="Front Wall"
+            name="Front Wall",
+            flatshading=True
         )
     )
     
-    # Add room ceiling
-    vertices = [
-        [0, 0, room_height],  # bottom left
-        [width, 0, room_height],  # bottom right
-        [width, height, room_height],  # top right
-        [0, height, room_height],  # top left
-    ]
-    
-    fig.add_trace(
-        go.Mesh3d(
-            x=[v[0] for v in vertices],
-            y=[v[1] for v in vertices],
-            z=[v[2] for v in vertices],
-            i=i, j=j, k=k,
-            color="#FFFFFF",
-            opacity=0.8,
-            name="Ceiling"
-        )
-    )
+    # Ceiling removed as requested
     
     # Add furniture items in 3D
     if hasattr(st.session_state.room, 'furniture') and st.session_state.room.furniture:
