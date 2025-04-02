@@ -2,14 +2,14 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import json
+import plotly.graph_objects as go
 from PIL import Image, ImageDraw
 from io import BytesIO
 import base64
+import math
 
 from room import Room
-from furniture import Furniture, FurnitureItem
-from utils import generate_room_image, get_mouse_pos_in_canvas
-from assets.furniture_items import FURNITURE_ITEMS
+from utils import get_wall_color_hex, get_floor_design_color
 from assets.wall_colors import WALL_COLORS
 from assets.floor_designs import FLOOR_DESIGNS
 
@@ -74,77 +74,16 @@ with col2:
     if selected_floor_design != st.session_state.room.floor_design:
         st.session_state.room.floor_design = selected_floor_design
     
-    # Furniture selection section
-    st.header("Furniture")
+    # Camera controls for 3D view
+    st.header("3D View Controls")
     
-    furniture_category = st.selectbox("Category", ["All"] + list(set(item.category for item in FURNITURE_ITEMS)))
+    camera_angle = st.slider("Camera Angle", 0, 359, st.session_state.camera_angle)
+    if camera_angle != st.session_state.camera_angle:
+        st.session_state.camera_angle = camera_angle
     
-    filtered_items = FURNITURE_ITEMS
-    if furniture_category != "All":
-        filtered_items = [item for item in FURNITURE_ITEMS if item.category == furniture_category]
-    
-    # Create a selection grid for furniture items
-    cols = st.columns(2)
-    for i, item in enumerate(filtered_items):
-        with cols[i % 2]:
-            if st.button(f"{item.name}", key=f"btn_{item.id}"):
-                new_furniture = Furniture(
-                    item_id=item.id,
-                    name=item.name,
-                    width=item.width,
-                    height=item.height,
-                    x=50,
-                    y=50,
-                    color=item.default_color,
-                    rotation=0
-                )
-                st.session_state.room.add_furniture(new_furniture)
-    
-    # Controls for selected furniture
-    if st.session_state.selected_furniture is not None:
-        st.subheader("Selected Furniture")
-        furniture = st.session_state.room.get_furniture_by_id(st.session_state.selected_furniture)
-        
-        if furniture:
-            st.write(f"**{furniture.name}**")
-            
-            # Color selection for furniture
-            if hasattr(furniture, 'item') and hasattr(furniture.item, 'available_colors') and furniture.item.available_colors:
-                selected_color = st.selectbox("Color", furniture.item.available_colors, 
-                                           index=furniture.item.available_colors.index(furniture.color) if furniture.color in furniture.item.available_colors else 0)
-                if selected_color != furniture.color:
-                    furniture.color = selected_color
-            
-            # Manual position adjustment
-            st.number_input("X Position (cm)", min_value=0, max_value=st.session_state.room.width, 
-                         value=int(furniture.x), key=f"x_pos_{furniture.id}", 
-                         on_change=lambda: st.session_state.room.update_furniture_position(
-                             st.session_state.selected_furniture, 
-                             st.session_state[f"x_pos_{furniture.id}"], 
-                             furniture.y))
-            
-            st.number_input("Y Position (cm)", min_value=0, max_value=st.session_state.room.height, 
-                         value=int(furniture.y), key=f"y_pos_{furniture.id}", 
-                         on_change=lambda: st.session_state.room.update_furniture_position(
-                             st.session_state.selected_furniture, 
-                             furniture.x, 
-                             st.session_state[f"y_pos_{furniture.id}"]))
-            
-            # Rotation control
-            rotation = st.slider("Rotation (degrees)", 0, 359, int(furniture.rotation), key=f"rotation_{furniture.id}")
-            if rotation != furniture.rotation:
-                furniture.rotation = rotation
-            
-            # Scale control
-            scale = st.slider("Scale", 0.5, 2.0, float(furniture.scale), 0.1, key=f"scale_{furniture.id}")
-            if scale != furniture.scale:
-                furniture.scale = scale
-            
-            # Remove furniture button
-            if st.button("Remove", key=f"remove_{furniture.id}"):
-                st.session_state.room.remove_furniture(st.session_state.selected_furniture)
-                st.session_state.selected_furniture = None
-                st.rerun()
+    camera_height = st.slider("Camera Height", 100, 400, st.session_state.camera_height)
+    if camera_height != st.session_state.camera_height:
+        st.session_state.camera_height = camera_height
     
     # Save and load design section
     st.header("Save & Load")
@@ -185,177 +124,168 @@ with col2:
         st.markdown(href, unsafe_allow_html=True)
 
 with col1:
-    # Main canvas for room visualization
-    st.header("Room View")
+    # Main 3D room visualization
+    st.header("3D Room View")
     
-    # Generate room image
-    room_img = generate_room_image(st.session_state.room)
+    # Get the wall color
+    wall_color_hex = get_wall_color_hex(st.session_state.room.wall_color)
     
-    # Convert the PIL image to a data URL
-    buffered = BytesIO()
-    room_img.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
+    # Get floor design colors
+    floor_colors = get_floor_design_color(st.session_state.room.floor_design)
     
-    # Create a clickable image using HTML/CSS
-    canvas_html = f"""
-    <div style="position: relative; width: 100%; max-width: {st.session_state.room.width}px;">
-        <img src="data:image/png;base64,{img_str}" width="100%" id="room_canvas">
-    </div>
-    <script>
-        const img = document.getElementById('room_canvas');
-        
-        img.addEventListener('click', function(e) {{
-            const rect = e.target.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const canvas_width = this.clientWidth;
-            const canvas_height = this.clientHeight;
-            
-            // Send click coordinates to Streamlit
-            const data = {{
-                x: x / canvas_width,
-                y: y / canvas_height,
-                width: canvas_width,
-                height: canvas_height
-            }};
-            
-            window.parent.postMessage({{
-                type: 'streamlit:setComponentValue',
-                value: data
-            }}, '*');
-        }});
-        
-        img.addEventListener('mousedown', function(e) {{
-            const rect = e.target.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const canvas_width = this.clientWidth;
-            const canvas_height = this.clientHeight;
-            
-            // Send mousedown coordinates to Streamlit
-            const data = {{
-                event: 'mousedown',
-                x: x / canvas_width,
-                y: y / canvas_height,
-                width: canvas_width,
-                height: canvas_height
-            }};
-            
-            window.parent.postMessage({{
-                type: 'streamlit:setComponentValue',
-                value: data
-            }}, '*');
-        }});
-        
-        img.addEventListener('mousemove', function(e) {{
-            if (e.buttons === 1) {{  // Left mouse button is pressed
-                const rect = e.target.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const canvas_width = this.clientWidth;
-                const canvas_height = this.clientHeight;
-                
-                // Send mousemove coordinates to Streamlit
-                const data = {{
-                    event: 'mousemove',
-                    x: x / canvas_width,
-                    y: y / canvas_height,
-                    width: canvas_width,
-                    height: canvas_height
-                }};
-                
-                window.parent.postMessage({{
-                    type: 'streamlit:setComponentValue',
-                    value: data
-                }}, '*');
-            }}
-        }});
-        
-        img.addEventListener('mouseup', function(e) {{
-            const data = {{
-                event: 'mouseup'
-            }};
-            
-            window.parent.postMessage({{
-                type: 'streamlit:setComponentValue',
-                value: data
-            }}, '*');
-        }});
-    </script>
-    """
+    # Create 3D visualization using Plotly
+    fig = go.Figure()
     
-    # Display the custom HTML
-    from streamlit.components.v1 import html
-    room_interaction = html(canvas_html, height=int(st.session_state.room.height * 0.8))
+    # Room dimensions
+    width = st.session_state.room.width / 100  # Convert to meters for better 3D scale
+    height = st.session_state.room.height / 100
+    room_height = 2.5  # Standard room height in meters
     
-    # Process clicks and interactions
-    if room_interaction:
-        if 'event' in room_interaction:
-            if room_interaction['event'] == 'mousedown':
-                # Get coordinates in actual room dimensions
-                room_x, room_y = get_mouse_pos_in_canvas(
-                    room_interaction['x'],
-                    room_interaction['y'],
-                    room_interaction['width'],
-                    room_interaction['height'],
-                    st.session_state.room.width,
-                    st.session_state.room.height
-                )
-                
-                # Check if a furniture item was clicked
-                clicked_furniture = st.session_state.room.get_furniture_at_position(room_x, room_y)
-                
-                if clicked_furniture:
-                    st.session_state.selected_furniture = clicked_furniture.id
-                    st.session_state.dragging = True
-                    st.session_state.drag_start_pos = (room_x, room_y)
-                else:
-                    st.session_state.selected_furniture = None
-                
-                st.rerun()
-            
-            elif room_interaction['event'] == 'mousemove' and st.session_state.dragging and st.session_state.selected_furniture is not None:
-                # Get coordinates in actual room dimensions
-                room_x, room_y = get_mouse_pos_in_canvas(
-                    room_interaction['x'],
-                    room_interaction['y'],
-                    room_interaction['width'],
-                    room_interaction['height'],
-                    st.session_state.room.width,
-                    st.session_state.room.height
-                )
-                
-                # Update furniture position
-                furniture = st.session_state.room.get_furniture_by_id(st.session_state.selected_furniture)
-                if furniture:
-                    furniture.x = room_x
-                    furniture.y = room_y
-                
-                st.rerun()
-            
-            elif room_interaction['event'] == 'mouseup':
-                st.session_state.dragging = False
-                st.session_state.rotating = False
-                st.rerun()
-        else:
-            # Handle regular clicks
-            room_x, room_y = get_mouse_pos_in_canvas(
-                room_interaction['x'],
-                room_interaction['y'],
-                room_interaction['width'],
-                room_interaction['height'],
-                st.session_state.room.width,
-                st.session_state.room.height
+    # Calculate camera position based on angle and height
+    camera_angle_rad = math.radians(st.session_state.camera_angle)
+    camera_distance = max(width, height) * 1.5
+    camera_x = camera_distance * math.sin(camera_angle_rad)
+    camera_y = camera_distance * math.cos(camera_angle_rad)
+    camera_z = st.session_state.camera_height / 100
+    
+    # Add floor
+    vertices = [
+        [0, 0, 0],  # bottom left
+        [width, 0, 0],  # bottom right
+        [width, height, 0],  # top right
+        [0, height, 0],  # top left
+    ]
+    
+    i = [0, 0, 0, 0]
+    j = [1, 2, 3, 0]
+    k = [2, 3, 0, 1]
+    
+    fig.add_trace(
+        go.Mesh3d(
+            x=[v[0] for v in vertices],
+            y=[v[1] for v in vertices],
+            z=[v[2] for v in vertices],
+            i=i, j=j, k=k,
+            color=floor_colors["primary"],
+            name="Floor"
+        )
+    )
+    
+    # Add walls
+    # Wall 1 (left)
+    vertices = [
+        [0, 0, 0],  # bottom left
+        [0, height, 0],  # bottom right
+        [0, height, room_height],  # top right
+        [0, 0, room_height],  # top left
+    ]
+    
+    fig.add_trace(
+        go.Mesh3d(
+            x=[v[0] for v in vertices],
+            y=[v[1] for v in vertices],
+            z=[v[2] for v in vertices],
+            i=i, j=j, k=k,
+            color=wall_color_hex,
+            name="Left Wall"
+        )
+    )
+    
+    # Wall 2 (back)
+    vertices = [
+        [0, 0, 0],  # bottom left
+        [width, 0, 0],  # bottom right
+        [width, 0, room_height],  # top right
+        [0, 0, room_height],  # top left
+    ]
+    
+    fig.add_trace(
+        go.Mesh3d(
+            x=[v[0] for v in vertices],
+            y=[v[1] for v in vertices],
+            z=[v[2] for v in vertices],
+            i=i, j=j, k=k,
+            color=wall_color_hex,
+            name="Back Wall"
+        )
+    )
+    
+    # Wall 3 (right)
+    vertices = [
+        [width, 0, 0],  # bottom left
+        [width, height, 0],  # bottom right
+        [width, height, room_height],  # top right
+        [width, 0, room_height],  # top left
+    ]
+    
+    fig.add_trace(
+        go.Mesh3d(
+            x=[v[0] for v in vertices],
+            y=[v[1] for v in vertices],
+            z=[v[2] for v in vertices],
+            i=i, j=j, k=k,
+            color=wall_color_hex,
+            name="Right Wall"
+        )
+    )
+    
+    # Wall 4 (front)
+    vertices = [
+        [0, height, 0],  # bottom left
+        [width, height, 0],  # bottom right
+        [width, height, room_height],  # top right
+        [0, height, room_height],  # top left
+    ]
+    
+    fig.add_trace(
+        go.Mesh3d(
+            x=[v[0] for v in vertices],
+            y=[v[1] for v in vertices],
+            z=[v[2] for v in vertices],
+            i=i, j=j, k=k,
+            color=wall_color_hex,
+            name="Front Wall"
+        )
+    )
+    
+    # Add room ceiling
+    vertices = [
+        [0, 0, room_height],  # bottom left
+        [width, 0, room_height],  # bottom right
+        [width, height, room_height],  # top right
+        [0, height, room_height],  # top left
+    ]
+    
+    fig.add_trace(
+        go.Mesh3d(
+            x=[v[0] for v in vertices],
+            y=[v[1] for v in vertices],
+            z=[v[2] for v in vertices],
+            i=i, j=j, k=k,
+            color="#FFFFFF",
+            opacity=0.8,
+            name="Ceiling"
+        )
+    )
+    
+    # Set up the 3D scene
+    fig.update_layout(
+        scene=dict(
+            xaxis=dict(showticklabels=False, title=""),
+            yaxis=dict(showticklabels=False, title=""),
+            zaxis=dict(showticklabels=False, title=""),
+            aspectmode='data',
+            camera=dict(
+                eye=dict(x=camera_x, y=camera_y, z=camera_z),
+                up=dict(x=0, y=0, z=1)
             )
-            
-            clicked_furniture = st.session_state.room.get_furniture_at_position(room_x, room_y)
-            
-            if clicked_furniture:
-                st.session_state.selected_furniture = clicked_furniture.id
-            else:
-                st.session_state.selected_furniture = None
-            
-            st.rerun()
+        ),
+        margin=dict(l=0, r=0, b=0, t=0),
+        height=600
+    )
+    
+    # Display the 3D visualization
+    st.plotly_chart(fig, use_container_width=True)
     
     # Instructions
     st.markdown("""
