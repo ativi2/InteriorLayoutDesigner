@@ -7,11 +7,15 @@ from PIL import Image, ImageDraw
 from io import BytesIO
 import base64
 import math
+from typing import Tuple, List, Dict, Optional, Any
 
 from room import Room
+from furniture import Furniture, get_furniture_item_by_id
 from utils import get_wall_color_hex, get_floor_design_color
 from assets.wall_colors import WALL_COLORS
 from assets.floor_designs import FLOOR_DESIGNS
+from assets.furniture_items import FURNITURE_ITEMS
+from room_templates import get_room_template_names, load_room_template
 
 # Set page configuration
 st.set_page_config(
@@ -31,15 +35,35 @@ if 'camera_angle' not in st.session_state:
     st.session_state.camera_angle = 45
 if 'camera_height' not in st.session_state:
     st.session_state.camera_height = 200
+if 'selected_furniture' not in st.session_state:
+    st.session_state.selected_furniture = None
+if 'dragging' not in st.session_state:
+    st.session_state.dragging = False
+if 'rotating' not in st.session_state:
+    st.session_state.rotating = False
+if 'drag_start_pos' not in st.session_state:
+    st.session_state.drag_start_pos = (0, 0)
+if 'scale_factor' not in st.session_state:
+    st.session_state.scale_factor = 1.0
 
 # Title and description
 st.title("3D Interior Design Simulator")
-st.markdown("Experiment with wall colors and floor designs in a 3D virtual room.")
+st.markdown("Experiment with furniture placement, wall colors, and floor designs in a 3D virtual room.")
 
 # Main layout
 col1, col2 = st.columns([3, 1])
 
 with col2:
+    # Room templates section
+    st.header("Room Templates")
+    room_templates = get_room_template_names()
+    selected_template = st.selectbox("Select a Room Template", room_templates)
+    
+    if st.button("Load Template"):
+        st.session_state.room = load_room_template(selected_template)
+        st.success(f"Loaded {selected_template} template!")
+        st.rerun()
+    
     # Room settings section
     st.header("Room Settings")
     
@@ -67,6 +91,42 @@ with col2:
     
     if selected_floor_design != st.session_state.room.floor_design:
         st.session_state.room.floor_design = selected_floor_design
+    
+    # Furniture selection
+    st.header("Furniture")
+    furniture_categories = sorted(list(set(item.category for item in FURNITURE_ITEMS)))
+    selected_category = st.selectbox("Category", furniture_categories)
+    
+    # Filter furniture items by the selected category
+    category_items = [item for item in FURNITURE_ITEMS if item.category == selected_category]
+    selected_item_name = st.selectbox("Select Furniture", [item.name for item in category_items])
+    
+    # Find the selected item
+    selected_item = next((item for item in category_items if item.name == selected_item_name), None)
+    
+    if selected_item:
+        # Display color options if available
+        if len(selected_item.available_colors) > 1:
+            selected_color = st.color_picker("Color", selected_item.default_color)
+        else:
+            selected_color = selected_item.default_color
+        
+        if st.button("Add Furniture"):
+            # Create a new furniture instance
+            new_furniture = Furniture(
+                item_id=selected_item.id,
+                name=selected_item.name,
+                width=selected_item.width,
+                height=selected_item.height,
+                x=st.session_state.room.width / 2 - selected_item.width / 2,
+                y=st.session_state.room.height / 2 - selected_item.height / 2,
+                color=selected_color
+            )
+            
+            # Add to the room
+            st.session_state.room.add_furniture(new_furniture)
+            st.success(f"Added {selected_item.name} to the room!")
+            st.rerun()
     
     # Camera controls for 3D view
     st.header("3D View Controls")
@@ -262,6 +322,59 @@ with col1:
         )
     )
     
+    # Add furniture items in 3D
+    if hasattr(st.session_state.room, 'furniture') and st.session_state.room.furniture:
+        for furniture in st.session_state.room.furniture:
+            # Convert furniture dimensions to meters
+            f_width = furniture.width / 100 * furniture.scale
+            f_height = furniture.height / 100 * furniture.scale
+            f_thickness = 0.05  # Standard thickness in meters
+            
+            # Calculate furniture position in meters
+            f_x = furniture.x / 100
+            f_y = furniture.y / 100
+            f_z = 0  # Place on the floor
+            
+            # Create a box for the furniture
+            x_values = []
+            y_values = []
+            z_values = []
+            
+            # Bottom face
+            x_values.extend([f_x, f_x + f_width, f_x + f_width, f_x, f_x])
+            y_values.extend([f_y, f_y, f_y + f_height, f_y + f_height, f_y])
+            z_values.extend([f_z, f_z, f_z, f_z, f_z])
+            
+            # Top face
+            x_values.extend([f_x, f_x + f_width, f_x + f_width, f_x, f_x])
+            y_values.extend([f_y, f_y, f_y + f_height, f_y + f_height, f_y])
+            z_values.extend([f_z + f_thickness, f_z + f_thickness, f_z + f_thickness, f_z + f_thickness, f_z + f_thickness])
+            
+            # Connect bottom to top
+            x_values.extend([f_x, f_x, f_x + f_width, f_x + f_width])
+            y_values.extend([f_y, f_y, f_y, f_y])
+            z_values.extend([f_z, f_z + f_thickness, f_z + f_thickness, f_z])
+            
+            x_values.extend([f_x + f_width, f_x + f_width, f_x, f_x])
+            y_values.extend([f_y, f_y, f_y + f_height, f_y + f_height])
+            z_values.extend([f_z, f_z + f_thickness, f_z + f_thickness, f_z])
+            
+            x_values.extend([f_x, f_x, f_x + f_width, f_x + f_width])
+            y_values.extend([f_y + f_height, f_y + f_height, f_y + f_height, f_y + f_height])
+            z_values.extend([f_z, f_z + f_thickness, f_z + f_thickness, f_z])
+            
+            # Add furniture as a 3D line
+            fig.add_trace(
+                go.Scatter3d(
+                    x=x_values,
+                    y=y_values,
+                    z=z_values,
+                    mode='lines',
+                    line=dict(color=furniture.color, width=4),
+                    name=furniture.name
+                )
+            )
+    
     # Set up the 3D scene
     fig.update_layout(
         scene=dict(
@@ -286,6 +399,8 @@ with col1:
     ### Instructions:
     - Adjust the room dimensions from the settings panel
     - Change wall colors and floor designs from the control panel
-    - Use the Camera Angle and Camera Height sliders to view the room from different angles
+    - Add furniture by selecting items from the furniture panel
+    - Arrange furniture by dragging and rotating pieces
+    - Use the Camera Angle and Height sliders to view the room from different angles
     - Save your designs and export them as JSON
     """)
