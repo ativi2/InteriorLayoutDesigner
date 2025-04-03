@@ -367,54 +367,134 @@ def main():
             # Calculate furniture position in meters
             f_x = furniture.x / 100
             f_y = furniture.y / 100
-            f_z = 0  # Place on the floor
+            f_z = 0  # Default: place on the floor
             
-            # Create a box for the furniture
-            x_values = []
-            y_values = []
-            z_values = []
+            # Check if this is a door or window
+            is_door_or_window = furniture.item_id.startswith('door') or furniture.item_id.startswith('window')
             
-            # Bottom face
-            x_values.extend([f_x, f_x + f_width, f_x + f_width, f_x, f_x])
-            y_values.extend([f_y, f_y, f_y + f_height, f_y + f_height, f_y])
-            z_values.extend([f_z, f_z, f_z, f_z, f_z])
-            
-            # Top face
-            x_values.extend([f_x, f_x + f_width, f_x + f_width, f_x, f_x])
-            y_values.extend([f_y, f_y, f_y + f_height, f_y + f_height, f_y])
-            z_values.extend([f_z + f_thickness, f_z + f_thickness, f_z + f_thickness, f_z + f_thickness, f_z + f_thickness])
-            
-            # Connect bottom to top
-            x_values.extend([f_x, f_x, f_x + f_width, f_x + f_width])
-            y_values.extend([f_y, f_y, f_y, f_y])
-            z_values.extend([f_z, f_z + f_thickness, f_z + f_thickness, f_z])
-            
-            x_values.extend([f_x + f_width, f_x + f_width, f_x, f_x])
-            y_values.extend([f_y, f_y, f_y + f_height, f_y + f_height])
-            z_values.extend([f_z, f_z + f_thickness, f_z + f_thickness, f_z])
-            
-            x_values.extend([f_x, f_x, f_x + f_width, f_x + f_width])
-            y_values.extend([f_y + f_height, f_y + f_height, f_y + f_height, f_y + f_height])
-            z_values.extend([f_z, f_z + f_thickness, f_z + f_thickness, f_z])
-            
-            # Add furniture as a 3D line
-            fig.add_trace(
-                go.Scatter3d(
-                    x=x_values,
-                    y=y_values,
-                    z=z_values,
-                    mode='lines',
-                    line=dict(color=furniture.color, width=4),
-                    name=furniture.name
+            if is_door_or_window:
+                # Determine which wall this item is closest to
+                # Calculate distances to each wall
+                distance_to_left = f_x
+                distance_to_right = width_m - f_x
+                distance_to_back = f_y
+                distance_to_front = height_m - f_y
+                
+                # Find the minimum distance
+                min_distance = min(distance_to_left, distance_to_right, distance_to_back, distance_to_front)
+                
+                # Wall height for doors and windows
+                wall_height = room_height
+                
+                # Position door/window on wall
+                if min_distance == distance_to_left:  # Left wall
+                    # Special handling for left wall items
+                    x_values = [0, 0, 0, 0, 0]
+                    y_values = [f_y, f_y + f_height, f_y + f_height, f_y, f_y]
+                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3]
+                    
+                elif min_distance == distance_to_right:  # Right wall
+                    # Special handling for right wall items
+                    x_values = [width_m, width_m, width_m, width_m, width_m]
+                    y_values = [f_y, f_y + f_height, f_y + f_height, f_y, f_y]
+                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3]
+                    
+                elif min_distance == distance_to_back:  # Back wall
+                    # Special handling for back wall items
+                    x_values = [f_x, f_x + f_width, f_x + f_width, f_x, f_x]
+                    y_values = [0, 0, 0, 0, 0]
+                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3]
+                    
+                else:  # Front wall
+                    # Special handling for front wall items
+                    x_values = [f_x, f_x + f_width, f_x + f_width, f_x, f_x]
+                    y_values = [height_m, height_m, height_m, height_m, height_m]
+                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3]
+                
+                # Add door/window as a 3D line on the wall
+                fig.add_trace(
+                    go.Scatter3d(
+                        x=x_values,
+                        y=y_values,
+                        z=z_values,
+                        mode='lines',
+                        line=dict(color=furniture.color, width=6),
+                        name=furniture.name
+                    )
                 )
-            )
+                
+                # Add a label at the center of the door/window
+                # Calculate center position based on wall placement
+                if min_distance == distance_to_left:  # Left wall
+                    label_x = 0 - 0.1  # Slight offset from wall
+                    label_y = f_y + f_height/2
+                    label_z = wall_height/2
+                elif min_distance == distance_to_right:  # Right wall
+                    label_x = width_m + 0.1  # Slight offset from wall
+                    label_y = f_y + f_height/2
+                    label_z = wall_height/2
+                elif min_distance == distance_to_back:  # Back wall
+                    label_x = f_x + f_width/2
+                    label_y = 0 - 0.1  # Slight offset from wall
+                    label_z = wall_height/2
+                else:  # Front wall
+                    label_x = f_x + f_width/2
+                    label_y = height_m + 0.1  # Slight offset from wall
+                    label_z = wall_height/2
+                
+            else:
+                # Regular furniture (not door/window)
+                # Create a box for the furniture
+                x_values = []
+                y_values = []
+                z_values = []
+                
+                # Bottom face
+                x_values.extend([f_x, f_x + f_width, f_x + f_width, f_x, f_x])
+                y_values.extend([f_y, f_y, f_y + f_height, f_y + f_height, f_y])
+                z_values.extend([f_z, f_z, f_z, f_z, f_z])
+                
+                # Top face
+                x_values.extend([f_x, f_x + f_width, f_x + f_width, f_x, f_x])
+                y_values.extend([f_y, f_y, f_y + f_height, f_y + f_height, f_y])
+                z_values.extend([f_z + f_thickness, f_z + f_thickness, f_z + f_thickness, f_z + f_thickness, f_z + f_thickness])
+                
+                # Connect bottom to top
+                x_values.extend([f_x, f_x, f_x + f_width, f_x + f_width])
+                y_values.extend([f_y, f_y, f_y, f_y])
+                z_values.extend([f_z, f_z + f_thickness, f_z + f_thickness, f_z])
+                
+                x_values.extend([f_x + f_width, f_x + f_width, f_x, f_x])
+                y_values.extend([f_y, f_y, f_y + f_height, f_y + f_height])
+                z_values.extend([f_z, f_z + f_thickness, f_z + f_thickness, f_z])
+                
+                x_values.extend([f_x, f_x, f_x + f_width, f_x + f_width])
+                y_values.extend([f_y + f_height, f_y + f_height, f_y + f_height, f_y + f_height])
+                z_values.extend([f_z, f_z + f_thickness, f_z + f_thickness, f_z])
+                
+                # Add furniture as a 3D line
+                fig.add_trace(
+                    go.Scatter3d(
+                        x=x_values,
+                        y=y_values,
+                        z=z_values,
+                        mode='lines',
+                        line=dict(color=furniture.color, width=4),
+                        name=furniture.name
+                    )
+                )
+                
+                # Regular furniture label position
+                label_x = f_x + f_width/2
+                label_y = f_y + f_height/2
+                label_z = f_z + f_thickness + 0.1  # Position slightly above the furniture
             
-            # Add furniture name label
+            # Add furniture name label with calculated position
             fig.add_trace(
                 go.Scatter3d(
-                    x=[f_x + f_width/2],
-                    y=[f_y + f_height/2],
-                    z=[f_z + f_thickness + 0.1],  # Position slightly above the furniture
+                    x=[label_x],
+                    y=[label_y],
+                    z=[label_z],
                     mode='text',
                     text=[furniture.name],
                     textposition='top center',
@@ -651,6 +731,7 @@ def main():
             <li><strong style="color: #f39c12;">Wall Colors:</strong> Choose different colors for each wall separately</li>
             <li><strong style="color: #f39c12;">Floor Design:</strong> Select from various floor patterns like Hardwood, Tile, Stripes, and Zigzag</li>
             <li><strong style="color: #f39c12;">Furniture:</strong> Add furniture items from different categories and position them in the room</li>
+            <li><strong style="color: #f39c12;">Doors & Windows:</strong> Add and position doors and windows on your walls</li>
         </ul>
         <div style="text-align: center; margin-top: 20px; background-color: #2c3e50; padding: 15px; border-radius: 8px;">
             <p style="color: #ecf0f1; font-size: 16px;">Contact: <a href="mailto:support@interiordesignsimulator.com" style="color: #3498db; text-decoration: none; font-weight: bold;">support@interiordesignsimulator.com</a></p>

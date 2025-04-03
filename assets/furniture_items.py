@@ -2,6 +2,47 @@ from furniture import FurnitureItem, register_furniture_item
 
 # Define furniture items
 FURNITURE_ITEMS = [
+    # Doors and Windows
+    FurnitureItem(
+        id="door_single",
+        name="Single Door",
+        category="Doors & Windows",
+        width=80,
+        height=20,
+        default_color="#8B4513",
+        available_colors=["#8B4513", "#A52A2A", "#D2B48C", "#FFFFFF", "#000000"],
+        shape="rectangle"
+    ),
+    FurnitureItem(
+        id="door_double",
+        name="Double Door",
+        category="Doors & Windows",
+        width=120,
+        height=20,
+        default_color="#8B4513",
+        available_colors=["#8B4513", "#A52A2A", "#D2B48C", "#FFFFFF", "#000000"],
+        shape="rectangle"
+    ),
+    FurnitureItem(
+        id="window_small",
+        name="Small Window",
+        category="Doors & Windows",
+        width=60,
+        height=15,
+        default_color="#87CEEB",
+        available_colors=["#87CEEB", "#ADD8E6", "#FFFFFF"],
+        shape="rectangle"
+    ),
+    FurnitureItem(
+        id="window_large",
+        name="Large Window",
+        category="Doors & Windows",
+        width=120,
+        height=15,
+        default_color="#87CEEB",
+        available_colors=["#87CEEB", "#ADD8E6", "#FFFFFF"],
+        shape="rectangle"
+    ),
     # Living Room
     FurnitureItem(
         id="sofa_3seater",
