@@ -589,10 +589,10 @@ def main():
                 pos_col1, pos_col2 = st.columns(2)
                 
                 with pos_col1:
-                    x_pos = st.slider("X Position", 0, st.session_state.room.width, st.session_state.room.width // 2)
+                    x_pos = st.slider("X Position", 0, st.session_state.room.width, st.session_state.room.width // 2, key="add_furniture_x_pos")
                 
                 with pos_col2:
-                    y_pos = st.slider("Y Position", 0, st.session_state.room.height, st.session_state.room.height // 2)
+                    y_pos = st.slider("Y Position", 0, st.session_state.room.height, st.session_state.room.height // 2, key="add_furniture_y_pos")
                 
                 if st.button("Add to Room"):
                     new_furniture = Furniture(
@@ -625,8 +625,8 @@ def main():
                 
                 with col_move:
                     st.text(f"Current Position: ({selected_furniture.x}, {selected_furniture.y})")
-                    new_x = st.slider("X Position", 0, st.session_state.room.width, int(selected_furniture.x))
-                    new_y = st.slider("Y Position", 0, st.session_state.room.height, int(selected_furniture.y))
+                    new_x = st.slider("X Position", 0, st.session_state.room.width, int(selected_furniture.x), key=f"move_furniture_x_pos_{selected_furniture_id}")
+                    new_y = st.slider("Y Position", 0, st.session_state.room.height, int(selected_furniture.y), key=f"move_furniture_y_pos_{selected_furniture_id}")
                     
                     if st.button("Move Furniture"):
                         st.session_state.room.update_furniture_position(selected_furniture_id, new_x, new_y)
