@@ -449,7 +449,7 @@ def main():
     st.markdown("<h2 style='text-align: center;'>Room Editing Options</h2>", unsafe_allow_html=True)
     
     # Create tabs for different editing categories
-    edit_tabs = st.tabs(["Room Dimensions", "Wall Colors", "Floor Design", "Furniture", "Camera Control", "Save/Load"])
+    edit_tabs = st.tabs(["Room Dimensions", "Wall Colors", "Floor Design", "Furniture"])
     
     with edit_tabs[0]:  # Room Dimensions
         st.subheader("Room Dimensions")
@@ -641,51 +641,6 @@ def main():
         else:
             st.write("No furniture in the room. Add furniture using the controls above.")
     
-    with edit_tabs[4]:  # Camera Control
-        st.subheader("Camera Control")
-        camera_col1, camera_col2 = st.columns(2)
-        with camera_col1:
-            new_camera_x = st.slider("Camera Angle X", 0.5, 3.0, st.session_state.camera_x, step=0.1)
-            new_camera_y = st.slider("Camera Angle Y", 0.5, 3.0, st.session_state.camera_y, step=0.1)
-        
-        with camera_col2:
-            new_camera_z = st.slider("Camera Height", 0.5, 3.0, st.session_state.camera_z, step=0.1)
-            
-            if st.button("Apply Camera Settings"):
-                st.session_state.camera_x = new_camera_x
-                st.session_state.camera_y = new_camera_y
-                st.session_state.camera_z = new_camera_z
-                st.rerun()
-    
-    with edit_tabs[5]:  # Save/Load
-        st.subheader("Save/Load Design")
-        save_name = st.text_input("Design Name", "my_room_design")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Save Design"):
-                room_data = st.session_state.room.to_dict()
-                room_json = json.dumps(room_data)
-                
-                # Create a download link for the JSON data
-                st.download_button(
-                    label="Download Design",
-                    data=room_json,
-                    file_name=f"{save_name}.json",
-                    mime="application/json"
-                )
-        
-        with col2:
-            uploaded_file = st.file_uploader("Upload Design", type=["json"])
-            if uploaded_file is not None:
-                try:
-                    room_data = json.loads(uploaded_file.read())
-                    st.session_state.room = Room.from_dict(room_data)
-                    st.success("Room design loaded successfully!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error loading room design: {e}")
-    
     # ===== FOOTER SECTION =====
     st.markdown("""
     <div style="background-color: #34495e; padding: 20px; border-radius: 10px; margin-top: 30px; color: #ecf0f1;">
@@ -696,8 +651,6 @@ def main():
             <li><strong style="color: #f39c12;">Wall Colors:</strong> Choose different colors for each wall separately</li>
             <li><strong style="color: #f39c12;">Floor Design:</strong> Select from various floor patterns like Hardwood, Tile, Stripes, and Zigzag</li>
             <li><strong style="color: #f39c12;">Furniture:</strong> Add furniture items from different categories and position them in the room</li>
-            <li><strong style="color: #f39c12;">Camera Control:</strong> Adjust the viewing angle to see the room from different perspectives</li>
-            <li><strong style="color: #f39c12;">Save/Load:</strong> Export your design as a JSON file to share or save it for later use</li>
         </ul>
         <div style="text-align: center; margin-top: 20px; background-color: #2c3e50; padding: 15px; border-radius: 8px;">
             <p style="color: #ecf0f1; font-size: 16px;">Contact: <a href="mailto:support@interiordesignsimulator.com" style="color: #3498db; text-decoration: none; font-weight: bold;">support@interiordesignsimulator.com</a></p>
