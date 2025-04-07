@@ -1,5 +1,5 @@
 import math
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Union
 
 class FurnitureItem:
     """Class representing a furniture item template."""
@@ -28,7 +28,8 @@ class Furniture:
         self.color = color
         self.rotation = rotation  # In degrees
         self.scale = scale
-        self.item = None  # Will be set when added to a room
+        self.item: Optional[FurnitureItem] = None  # Will be set when added to a room
+        self.wall = "Auto"  # For doors and windows - which wall to place on ("Auto", "Left", "Right", "Front", "Back")
     
     def contains_point(self, px: float, py: float) -> bool:
         """Check if the furniture contains the given point."""
@@ -92,13 +93,14 @@ class Furniture:
             "y": self.y,
             "color": self.color,
             "rotation": self.rotation,
-            "scale": self.scale
+            "scale": self.scale,
+            "wall": getattr(self, "wall", "Auto")  # Include wall attribute
         }
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Furniture':
         """Create a furniture item from a dictionary."""
-        return cls(
+        furniture = cls(
             id=data.get("id"),
             item_id=data.get("item_id"),
             name=data.get("name"),
@@ -110,6 +112,12 @@ class Furniture:
             rotation=data.get("rotation", 0),
             scale=data.get("scale", 1.0)
         )
+        
+        # Add wall attribute if present
+        if "wall" in data:
+            furniture.wall = data["wall"]
+            
+        return furniture
 
 # Dictionary to store furniture items
 _furniture_items: Dict[str, FurnitureItem] = {}

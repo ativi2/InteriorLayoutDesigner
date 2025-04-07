@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from furniture import Furniture, get_furniture_item_by_id
 
 class Room:
@@ -16,8 +16,9 @@ class Room:
         self.furniture: List[Furniture] = []
         self.next_furniture_id = 1
     
-    def add_furniture(self, furniture: Furniture) -> None:
-        """Add a furniture item to the room with a unique ID."""
+    def add_furniture(self, furniture: Furniture) -> Tuple[bool, str]:
+        """Add a furniture item to the room with a unique ID.
+        Returns (success, message) tuple. If success is False, message contains the reason."""
         furniture.id = self.next_furniture_id
         self.next_furniture_id += 1
         
@@ -27,7 +28,17 @@ class Room:
         # Constrain furniture position to stay within room boundaries
         self._constrain_furniture_position(furniture)
         
+        # Check for overlaps with existing furniture
+        # Skip this check for doors and windows as they are placed on walls
+        if not (furniture.item_id.startswith('door') or furniture.item_id.startswith('window')):
+            overlapping_furniture = self._check_furniture_overlap(furniture)
+            if overlapping_furniture:
+                # Reset the furniture ID counter since we're not adding this item
+                self.next_furniture_id -= 1
+                return False, f"Cannot place {furniture.name} here. It overlaps with {overlapping_furniture.name}."
+        
         self.furniture.append(furniture)
+        return True, f"Added {furniture.name} to the room."
     
     def _constrain_furniture_position(self, furniture: Furniture) -> None:
         """Make sure furniture stays within room boundaries."""
@@ -68,11 +79,57 @@ class Room:
         """Update the position of a furniture item."""
         furniture = self.get_furniture_by_id(furniture_id)
         if furniture:
+            # Store the original position in case we need to revert
+            original_x, original_y = furniture.x, furniture.y
+            
+            # Update position
             furniture.x = x
             furniture.y = y
             self._constrain_furniture_position(furniture)
+            
+            # Check for overlaps (except for doors and windows)
+            if not (furniture.item_id.startswith('door') or furniture.item_id.startswith('window')):
+                overlapping_furniture = self._check_furniture_overlap(furniture)
+                if overlapping_furniture and overlapping_furniture.id != furniture.id:
+                    # Revert to original position if overlap detected
+                    furniture.x, furniture.y = original_x, original_y
+                    return False
+            
             return True
         return False
+    
+    def _check_furniture_overlap(self, furniture: Furniture) -> Optional[Furniture]:
+        """Check if furniture overlaps with any existing furniture in the room.
+        Returns the first overlapping furniture item or None if no overlap."""
+        for existing_furniture in self.furniture:
+            # Skip checking against itself or doors/windows
+            if (existing_furniture.id == furniture.id or 
+                existing_furniture.item_id.startswith('door') or 
+                existing_furniture.item_id.startswith('window')):
+                continue
+                
+            # Simple bounding box collision detection using corners
+            # Get corners for both furniture items
+            furniture_corners = furniture.get_corners()
+            existing_furniture_corners = existing_furniture.get_corners()
+            
+            # Get bounding boxes (min/max coordinates) for both items
+            f_min_x = min(corner[0] for corner in furniture_corners)
+            f_max_x = max(corner[0] for corner in furniture_corners)
+            f_min_y = min(corner[1] for corner in furniture_corners)
+            f_max_y = max(corner[1] for corner in furniture_corners)
+            
+            e_min_x = min(corner[0] for corner in existing_furniture_corners)
+            e_max_x = max(corner[0] for corner in existing_furniture_corners)
+            e_min_y = min(corner[1] for corner in existing_furniture_corners)
+            e_max_y = max(corner[1] for corner in existing_furniture_corners)
+            
+            # Check for overlap using AABB (Axis-Aligned Bounding Box) collision detection
+            if (f_min_x <= e_max_x and f_max_x >= e_min_x and
+                f_min_y <= e_max_y and f_max_y >= e_min_y):
+                return existing_furniture
+                
+        return None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert the room to a dictionary for serialization."""

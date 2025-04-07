@@ -35,17 +35,95 @@ if 'camera_y' not in st.session_state:
     
 if 'camera_z' not in st.session_state:
     st.session_state.camera_z = 1.5
+    
+if 'saved_rooms' not in st.session_state:
+    st.session_state.saved_rooms = []
+    
+if 'current_room_name' not in st.session_state:
+    st.session_state.current_room_name = "Untitled Room"
+    
+if 'undo_history' not in st.session_state:
+    st.session_state.undo_history = []
+    
+if 'selected_wall' not in st.session_state:
+    st.session_state.selected_wall = "Auto"  # Default to auto-detection of nearest wall
+    
+if 'show_room_save_dialog' not in st.session_state:
+    st.session_state.show_room_save_dialog = False
+    
+# Function to save current room state to undo history
+def save_to_undo_history():
+    # Keep a limited history (last 10 states)
+    if len(st.session_state.undo_history) >= 10:
+        st.session_state.undo_history.pop(0)  # Remove oldest state
+    
+    # Create a deep copy of current room state
+    st.session_state.undo_history.append(st.session_state.room.to_dict())
+
+# Function to undo last action
+def undo_last_action():
+    if st.session_state.undo_history:
+        # Get the last state and remove it from history
+        last_state = st.session_state.undo_history.pop()
+        # Restore the room to that state
+        st.session_state.room = Room.from_dict(last_state)
+        return True
+    return False
+
+def save_current_room(room_name: str) -> bool:
+    """Save the current room with the given name."""
+    # Create a room entry with name and state
+    room_data = {
+        "name": room_name,
+        "state": st.session_state.room.to_dict()
+    }
+    
+    # Check if a room with this name already exists
+    for i, room in enumerate(st.session_state.saved_rooms):
+        if room["name"] == room_name:
+            # Replace the existing room
+            st.session_state.saved_rooms[i] = room_data
+            return True
+    
+    # Add as a new room
+    st.session_state.saved_rooms.append(room_data)
+    st.session_state.current_room_name = room_name
+    return True
+
+def create_new_room(save_current: bool = False, current_room_name: str = "Untitled Room") -> None:
+    """Create a new empty room and optionally save the current one."""
+    if save_current:
+        save_current_room(current_room_name)
+    
+    # Create a new room
+    st.session_state.room = Room(width=500, height=400, wall_color="White", floor_design="Hardwood")
+    st.session_state.current_room_name = "Untitled Room"
+    # Clear undo history
+    st.session_state.undo_history = []
 
 def main():
     # ===== HEADER SECTION =====
-    # Top header with site name and details
-    st.markdown("""
-    <div style="text-align: center; padding: 20px; background-color: #2c3e50; border-radius: 10px; margin-bottom: 20px; color: #ecf0f1;">
-        <h1 style="color: #e74c3c;">Interior Design Simulator</h1>
-        <p style="color: #ecf0f1; font-size: 18px;">An interactive tool for visualizing and planning interior spaces in 3D</p>
-        <p style="color: #ecf0f1; font-size: 16px;">Design your dream space with customizable walls, floors, and furniture</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Create a header with Undo button in the corner
+    col1, col2 = st.columns([4, 1])
+    
+    with col1:
+        # Top header with site name and details
+        st.markdown("""
+        <div style="text-align: center; padding: 20px; background-color: #2c3e50; border-radius: 10px; margin-bottom: 20px; color: #ecf0f1;">
+            <h1 style="color: #e74c3c;">Interior Design Simulator</h1>
+            <p style="color: #ecf0f1; font-size: 18px;">An interactive tool for visualizing and planning interior spaces in 3D</p>
+            <p style="color: #ecf0f1; font-size: 16px;">Design your dream space with customizable walls, floors, and furniture</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        # Add undo button
+        if st.button("↩️ Undo", help="Undo the last action"):
+            if undo_last_action():
+                st.success("Last action undone!")
+                st.rerun()
+            else:
+                st.warning("Nothing to undo.")
     
     # ===== 3D VISUALIZATION SECTION =====
     # This section will contain only the 3D view of the room for maximum visibility
@@ -371,69 +449,120 @@ def main():
             
             # Check if this is a door or window
             is_door_or_window = furniture.item_id.startswith('door') or furniture.item_id.startswith('window')
+            is_door = furniture.item_id.startswith('door')
             
             if is_door_or_window:
-                # Determine which wall this item is closest to
-                # Calculate distances to each wall
-                distance_to_left = f_x
-                distance_to_right = width_m - f_x
-                distance_to_back = f_y
-                distance_to_front = height_m - f_y
-                
-                # Find the minimum distance
-                min_distance = min(distance_to_left, distance_to_right, distance_to_back, distance_to_front)
-                
-                # Wall height for doors and windows
+                # Wall placement can be specified or auto-detected
+                wall_placement = getattr(furniture, "wall", "Auto")
                 wall_height = room_height
                 
-                # Position door/window on wall
-                if min_distance == distance_to_left:  # Left wall
-                    # Special handling for left wall items
-                    x_values = [0, 0, 0, 0, 0]
-                    y_values = [f_y, f_y + f_height, f_y + f_height, f_y, f_y]
-                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3]
+                # Determine which wall to place on (either specified or auto-detected)
+                if wall_placement == "Auto":
+                    # Calculate distances to each wall for auto-detection
+                    distance_to_left = f_x
+                    distance_to_right = width_m - f_x
+                    distance_to_back = f_y
+                    distance_to_front = height_m - f_y
                     
-                elif min_distance == distance_to_right:  # Right wall
-                    # Special handling for right wall items
-                    x_values = [width_m, width_m, width_m, width_m, width_m]
-                    y_values = [f_y, f_y + f_height, f_y + f_height, f_y, f_y]
-                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3]
+                    # Find the minimum distance
+                    min_distance = min(distance_to_left, distance_to_right, distance_to_back, distance_to_front)
                     
-                elif min_distance == distance_to_back:  # Back wall
-                    # Special handling for back wall items
-                    x_values = [f_x, f_x + f_width, f_x + f_width, f_x, f_x]
-                    y_values = [0, 0, 0, 0, 0]
-                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3]
+                    # Auto-determine wall based on minimum distance
+                    if min_distance == distance_to_left:
+                        wall_placement = "Left"
+                    elif min_distance == distance_to_right:
+                        wall_placement = "Right"
+                    elif min_distance == distance_to_back:
+                        wall_placement = "Back"
+                    else:
+                        wall_placement = "Front"
+                
+                # Position door/window on the selected wall
+                if wall_placement == "Left":  # Left wall
+                    x_values = [0, 0, 0, 0, 0] if not is_door else [0]
+                    y_values = [f_y, f_y + f_height, f_y + f_height, f_y, f_y] if not is_door else [f_y]
+                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3] if not is_door else [wall_height/2]
+                    
+                elif wall_placement == "Right":  # Right wall
+                    x_values = [width_m, width_m, width_m, width_m, width_m] if not is_door else [width_m]
+                    y_values = [f_y, f_y + f_height, f_y + f_height, f_y, f_y] if not is_door else [f_y]
+                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3] if not is_door else [wall_height/2]
+                    
+                elif wall_placement == "Back":  # Back wall
+                    x_values = [f_x, f_x + f_width, f_x + f_width, f_x, f_x] if not is_door else [f_x]
+                    y_values = [0, 0, 0, 0, 0] if not is_door else [0]
+                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3] if not is_door else [wall_height/2]
                     
                 else:  # Front wall
-                    # Special handling for front wall items
-                    x_values = [f_x, f_x + f_width, f_x + f_width, f_x, f_x]
-                    y_values = [height_m, height_m, height_m, height_m, height_m]
-                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3]
+                    x_values = [f_x, f_x + f_width, f_x + f_width, f_x, f_x] if not is_door else [f_x]
+                    y_values = [height_m, height_m, height_m, height_m, height_m] if not is_door else [height_m]
+                    z_values = [wall_height/3, wall_height/3, 2*wall_height/3, 2*wall_height/3, wall_height/3] if not is_door else [wall_height/2]
                 
-                # Add door/window as a 3D line on the wall
-                fig.add_trace(
-                    go.Scatter3d(
-                        x=x_values,
-                        y=y_values,
-                        z=z_values,
-                        mode='lines',
-                        line=dict(color=furniture.color, width=6),
-                        name=furniture.name
+                if is_door:
+                    # Draw door as a rectangle (3D mesh) with more visibility
+                    x_values_door = []
+                    y_values_door = []
+                    z_values_door = []
+                    
+                    # Position door on the selected wall
+                    if wall_placement == "Left":  # Left wall
+                        x_values_door = [0, 0, 0, 0]
+                        y_values_door = [f_y, f_y + f_height, f_y + f_height, f_y]
+                        z_values_door = [0, 0, wall_height * 0.8, wall_height * 0.8]
+                    elif wall_placement == "Right":  # Right wall
+                        x_values_door = [width_m, width_m, width_m, width_m]
+                        y_values_door = [f_y, f_y + f_height, f_y + f_height, f_y]
+                        z_values_door = [0, 0, wall_height * 0.8, wall_height * 0.8]
+                    elif wall_placement == "Back":  # Back wall
+                        x_values_door = [f_x, f_x + f_width, f_x + f_width, f_x]
+                        y_values_door = [0, 0, 0, 0]
+                        z_values_door = [0, 0, wall_height * 0.8, wall_height * 0.8]
+                    else:  # Front wall
+                        x_values_door = [f_x, f_x + f_width, f_x + f_width, f_x]
+                        y_values_door = [height_m, height_m, height_m, height_m]
+                        z_values_door = [0, 0, wall_height * 0.8, wall_height * 0.8]
+                        
+                    # Add door as a filled mesh
+                    i = [0, 0]
+                    j = [1, 2]
+                    k = [2, 3]
+                    
+                    fig.add_trace(
+                        go.Mesh3d(
+                            x=x_values_door,
+                            y=y_values_door,
+                            z=z_values_door,
+                            i=i, j=j, k=k,
+                            color=furniture.color,
+                            opacity=0.9,
+                            name=furniture.name,
+                            flatshading=True
+                        )
                     )
-                )
+                else:
+                    # Add window as a 3D line on the wall (like before)
+                    fig.add_trace(
+                        go.Scatter3d(
+                            x=x_values,
+                            y=y_values,
+                            z=z_values,
+                            mode='lines',
+                            line=dict(color=furniture.color, width=6),
+                            name=furniture.name
+                        )
+                    )
                 
                 # Add a label at the center of the door/window
                 # Calculate center position based on wall placement
-                if min_distance == distance_to_left:  # Left wall
+                if wall_placement == "Left":  # Left wall
                     label_x = 0 - 0.1  # Slight offset from wall
                     label_y = f_y + f_height/2
                     label_z = wall_height/2
-                elif min_distance == distance_to_right:  # Right wall
+                elif wall_placement == "Right":  # Right wall
                     label_x = width_m + 0.1  # Slight offset from wall
                     label_y = f_y + f_height/2
                     label_z = wall_height/2
-                elif min_distance == distance_to_back:  # Back wall
+                elif wall_placement == "Back":  # Back wall
                     label_x = f_x + f_width/2
                     label_y = 0 - 0.1  # Slight offset from wall
                     label_z = wall_height/2
@@ -532,6 +661,81 @@ def main():
     edit_tabs = st.tabs(["Room Dimensions", "Wall Colors", "Floor Design", "Furniture"])
     
     with edit_tabs[0]:  # Room Dimensions
+        st.subheader("Room Management")
+        
+        # Display current room name
+        st.write(f"Current Room: **{st.session_state.current_room_name}**")
+        
+        # Room operations
+        room_ops_col1, room_ops_col2, room_ops_col3 = st.columns(3)
+        
+        with room_ops_col1:
+            # New Room Button
+            if st.button("New Room"):
+                # If there's a current room, prompt to save or delete
+                if hasattr(st.session_state.room, 'furniture') and len(st.session_state.room.furniture) > 0:
+                    st.session_state.show_room_save_dialog = True
+                else:
+                    # No furniture, just create a new room
+                    create_new_room()
+                    st.success("Created a new empty room")
+                    st.rerun()
+        
+        with room_ops_col2:
+            # Save Room 
+            room_name = st.text_input("Room Name", st.session_state.current_room_name)
+            if st.button("Save Room"):
+                if save_current_room(room_name):
+                    st.session_state.current_room_name = room_name
+                    st.success(f"Room '{room_name}' saved")
+                    st.rerun()
+        
+        with room_ops_col3:
+            # Load Room
+            if st.session_state.saved_rooms:
+                saved_room_names = [room["name"] for room in st.session_state.saved_rooms]
+                selected_saved_room = st.selectbox("Saved Rooms", saved_room_names)
+                
+                if st.button("Load Room"):
+                    # Find the selected room
+                    for room in st.session_state.saved_rooms:
+                        if room["name"] == selected_saved_room:
+                            # Save current state to undo history
+                            save_to_undo_history()
+                            # Load the selected room
+                            st.session_state.room = Room.from_dict(room["state"])
+                            st.session_state.current_room_name = selected_saved_room
+                            st.success(f"Loaded room: {selected_saved_room}")
+                            st.rerun()
+            else:
+                st.write("No saved rooms yet")
+        
+        # Display save dialog if needed
+        if hasattr(st.session_state, 'show_room_save_dialog') and st.session_state.show_room_save_dialog:
+            st.warning("Do you want to save the current room before creating a new one?")
+            save_col1, save_col2, save_col3 = st.columns(3)
+            
+            with save_col1:
+                if st.button("Save and Create New"):
+                    save_current_room(st.session_state.current_room_name)
+                    create_new_room()
+                    st.session_state.show_room_save_dialog = False
+                    st.success(f"Saved room '{st.session_state.current_room_name}' and created a new room")
+                    st.rerun()
+            
+            with save_col2:
+                if st.button("Discard and Create New"):
+                    create_new_room(save_current=False)
+                    st.session_state.show_room_save_dialog = False
+                    st.success("Created a new room (previous room discarded)")
+                    st.rerun()
+            
+            with save_col3:
+                if st.button("Cancel"):
+                    st.session_state.show_room_save_dialog = False
+                    st.rerun()
+        
+        # Room dimensions
         st.subheader("Room Dimensions")
         col1, col2 = st.columns(2)
         
@@ -542,6 +746,7 @@ def main():
             new_height = st.slider("Room Height (cm)", 200, 800, st.session_state.room.height)
         
         if st.button("Apply Dimensions"):
+            save_to_undo_history()
             st.session_state.room.width = new_width
             st.session_state.room.height = new_height
             st.success("Room dimensions updated")
@@ -553,6 +758,7 @@ def main():
         selected_template = st.selectbox("Select a template", template_names)
         
         if selected_template != "Custom" and st.button("Load Template"):
+            save_to_undo_history()
             st.session_state.room = load_room_template(selected_template)
             st.success(f"Loaded template: {selected_template}")
             st.rerun()
@@ -674,7 +880,17 @@ def main():
                 with pos_col2:
                     y_pos = st.slider("Y Position", 0, st.session_state.room.height, st.session_state.room.height // 2, key="add_furniture_y_pos")
                 
+                # Check if this is a door or window
+                is_door_or_window = selected_item.id.startswith('door') or selected_item.id.startswith('window')
+                
+                # If it's a door or window, provide wall selection option
+                wall_placement = "Auto"
+                if is_door_or_window:
+                    wall_options = ["Auto", "Left", "Back", "Right", "Front"]
+                    wall_placement = st.selectbox("Wall Placement", wall_options, key="wall_placement")
+                
                 if st.button("Add to Room"):
+                    # Create new furniture item
                     new_furniture = Furniture(
                         item_id=selected_item.id,
                         name=selected_item.name,
@@ -685,9 +901,21 @@ def main():
                         color=selected_color
                     )
                     
-                    st.session_state.room.add_furniture(new_furniture)
-                    st.success(f"Added {selected_item.name} to the room")
-                    st.rerun()
+                    # Add wall placement attribute for doors and windows
+                    if is_door_or_window:
+                        setattr(new_furniture, "wall", wall_placement)
+                    
+                    # Save action for undo history
+                    save_to_undo_history()
+                    
+                    # Add furniture to room
+                    success, message = st.session_state.room.add_furniture(new_furniture)
+                    
+                    if success:
+                        st.success(f"Added {selected_item.name} to the room")
+                        st.rerun()
+                    else:
+                        st.error(message)
         
         # Furniture Management
         st.subheader("Manage Existing Furniture")
