@@ -108,17 +108,13 @@ def main():
     header_row = st.container()
     with header_row:
         # Create columns for buttons at the top corner of the header
-        action_col1, action_col2, action_col3, action_col4, action_col5 = st.columns([9, 0.5, 1, 1, 1])
+        action_col1, action_col2, action_col3, action_col4 = st.columns([9, 1, 1, 1])
         
         with action_col1:
             # Empty column to push the buttons to the right
             pass
             
         with action_col2:
-            # Kebab menu (vertical three dots)
-            st.markdown("<h3 style='margin-top: 0; font-size: 24px; text-align: right;'>⋮</h3>", unsafe_allow_html=True)
-            
-        with action_col3:
             # Add undo button
             if st.button("↩️ UNDO", help="Undo the last action"):
                 if undo_last_action():
@@ -127,11 +123,11 @@ def main():
                 else:
                     st.warning("Nothing to undo.")
         
-        with action_col4:
+        with action_col3:
             # Add deploy button
             st.button("🚀 DEPLOY", help="Deploy your design")
         
-        with action_col5:
+        with action_col4:
             # Add refresh button
             if st.button("🔄 REFRESH", help="Refresh the view"):
                 st.rerun()
