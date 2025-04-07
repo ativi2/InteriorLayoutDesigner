@@ -103,21 +103,24 @@ def create_new_room(save_current: bool = False, current_room_name: str = "Untitl
 
 def main():
     # ===== HEADER SECTION =====
-    # Create a header with Undo button in the corner
-    col1, col2 = st.columns([4, 1])
+    # Top header with site name and details
+    st.markdown("""
+    <div style="text-align: center; padding: 20px; background-color: #2c3e50; border-radius: 10px; margin-bottom: 20px; color: #ecf0f1;">
+        <h1 style="color: #e74c3c;">Interior Design Simulator</h1>
+        <p style="color: #ecf0f1; font-size: 18px;">An interactive tool for visualizing and planning interior spaces in 3D</p>
+        <p style="color: #ecf0f1; font-size: 16px;">Design your dream space with customizable walls, floors, and furniture</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    with col1:
-        # Top header with site name and details
-        st.markdown("""
-        <div style="text-align: center; padding: 20px; background-color: #2c3e50; border-radius: 10px; margin-bottom: 20px; color: #ecf0f1;">
-            <h1 style="color: #e74c3c;">Interior Design Simulator</h1>
-            <p style="color: #ecf0f1; font-size: 18px;">An interactive tool for visualizing and planning interior spaces in 3D</p>
-            <p style="color: #ecf0f1; font-size: 16px;">Design your dream space with customizable walls, floors, and furniture</p>
-        </div>
-        """, unsafe_allow_html=True)
+    # Add action buttons under the header
+    action_col1, action_col2, action_col3 = st.columns([1, 1, 4])
     
-    with col2:
-        # Add undo button
+    with action_col1:
+        # Add deploy button
+        st.button("🚀 Deploy", help="Deploy your design")
+        
+    with action_col2:
+        # Add undo button next to deploy
         if st.button("↩️ Undo", help="Undo the last action"):
             if undo_last_action():
                 st.success("Last action undone!")
