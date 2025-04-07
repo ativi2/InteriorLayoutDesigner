@@ -104,17 +104,34 @@ def create_new_room(save_current: bool = False, current_room_name: str = "Untitl
 def main():
     # ===== HEADER SECTION =====
     
-    # Create header buttons first to position them at the top
+    # Create a custom header menu
+    st.markdown("""
+    <style>
+    .custom-button-container {
+        position: fixed;
+        top: 0.4rem;
+        right: 4rem;
+        z-index: 1000;
+        display: flex;
+    }
+    .stButton>button {
+        margin-right: 0.5rem;
+        height: 2.2rem;
+        padding: 0 1rem;
+    }
+    </style>
+    <div class="custom-button-container">
+        <!-- Buttons will be placed here via st.button -->
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Create header buttons beside Streamlit's kebab menu
     header_row = st.container()
     with header_row:
-        # Create columns for buttons at the top corner of the header
-        action_col1, action_col2, action_col3, action_col4 = st.columns([9, 1, 1, 1])
+        # Use small columns with minimal spacing
+        action_cols = st.columns([1, 1, 1, 9])
         
-        with action_col1:
-            # Empty column to push the buttons to the right
-            pass
-            
-        with action_col2:
+        with action_cols[0]:
             # Add undo button
             if st.button("↩️ UNDO", help="Undo the last action"):
                 if undo_last_action():
@@ -123,14 +140,18 @@ def main():
                 else:
                     st.warning("Nothing to undo.")
         
-        with action_col3:
+        with action_cols[1]:
             # Add deploy button
             st.button("🚀 DEPLOY", help="Deploy your design")
         
-        with action_col4:
+        with action_cols[2]:
             # Add refresh button
             if st.button("🔄 REFRESH", help="Refresh the view"):
                 st.rerun()
+                
+        with action_cols[3]:
+            # Empty column for spacing
+            pass
     
     # Top header with site name and details
     st.markdown("""
