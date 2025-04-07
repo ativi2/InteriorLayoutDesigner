@@ -112,21 +112,32 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Add action buttons under the header
-    action_col1, action_col2, action_col3 = st.columns([1, 1, 4])
+    # Add action buttons under the header in a single row
+    
+    # Create columns for buttons to be displayed in a single row
+    action_col1, action_col2, action_col3, action_col4, action_col5 = st.columns([0.5, 1, 1, 1, 4])
     
     with action_col1:
-        # Add deploy button
-        st.button("🚀 Deploy", help="Deploy your design")
+        # Ellipsis symbol
+        st.markdown("<h3 style='margin-top: 10px;'>⋯</h3>", unsafe_allow_html=True)
         
     with action_col2:
-        # Add undo button next to deploy
-        if st.button("↩️ Undo", help="Undo the last action"):
+        # Add undo button
+        if st.button("↩️ UNDO", help="Undo the last action"):
             if undo_last_action():
                 st.success("Last action undone!")
                 st.rerun()
             else:
                 st.warning("Nothing to undo.")
+    
+    with action_col3:
+        # Add deploy button
+        st.button("🚀 DEPLOY", help="Deploy your design")
+    
+    with action_col4:
+        # Add refresh button
+        if st.button("🔄 REFRESH", help="Refresh the view"):
+            st.rerun()
     
     # ===== 3D VISUALIZATION SECTION =====
     # This section will contain only the 3D view of the room for maximum visibility
