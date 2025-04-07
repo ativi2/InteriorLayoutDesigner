@@ -103,6 +103,39 @@ def create_new_room(save_current: bool = False, current_room_name: str = "Untitl
 
 def main():
     # ===== HEADER SECTION =====
+    
+    # Create header buttons first to position them at the top
+    header_row = st.container()
+    with header_row:
+        # Create columns for buttons at the top corner of the header
+        action_col1, action_col2, action_col3, action_col4, action_col5 = st.columns([9, 0.5, 1, 1, 1])
+        
+        with action_col1:
+            # Empty column to push the buttons to the right
+            pass
+            
+        with action_col2:
+            # Ellipsis symbol
+            st.markdown("<h3 style='margin-top: 0; font-size: 24px;'>⋯</h3>", unsafe_allow_html=True)
+            
+        with action_col3:
+            # Add undo button
+            if st.button("↩️ UNDO", help="Undo the last action"):
+                if undo_last_action():
+                    st.success("Last action undone!")
+                    st.rerun()
+                else:
+                    st.warning("Nothing to undo.")
+        
+        with action_col4:
+            # Add deploy button
+            st.button("🚀 DEPLOY", help="Deploy your design")
+        
+        with action_col5:
+            # Add refresh button
+            if st.button("🔄 REFRESH", help="Refresh the view"):
+                st.rerun()
+    
     # Top header with site name and details
     st.markdown("""
     <div style="text-align: center; padding: 20px; background-color: #2c3e50; border-radius: 10px; margin-bottom: 20px; color: #ecf0f1;">
@@ -111,33 +144,6 @@ def main():
         <p style="color: #ecf0f1; font-size: 16px;">Design your dream space with customizable walls, floors, and furniture</p>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Add action buttons under the header in a single row
-    
-    # Create columns for buttons to be displayed in a single row
-    action_col1, action_col2, action_col3, action_col4, action_col5 = st.columns([0.5, 1, 1, 1, 4])
-    
-    with action_col1:
-        # Ellipsis symbol
-        st.markdown("<h3 style='margin-top: 10px;'>⋯</h3>", unsafe_allow_html=True)
-        
-    with action_col2:
-        # Add undo button
-        if st.button("↩️ UNDO", help="Undo the last action"):
-            if undo_last_action():
-                st.success("Last action undone!")
-                st.rerun()
-            else:
-                st.warning("Nothing to undo.")
-    
-    with action_col3:
-        # Add deploy button
-        st.button("🚀 DEPLOY", help="Deploy your design")
-    
-    with action_col4:
-        # Add refresh button
-        if st.button("🔄 REFRESH", help="Refresh the view"):
-            st.rerun()
     
     # ===== 3D VISUALIZATION SECTION =====
     # This section will contain only the 3D view of the room for maximum visibility
